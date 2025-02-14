@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+        }
+
+        #result {
+            margin-top: 2rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: white;
+        }
+
+        .short-url {
+            color: var(--primary-color);
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .copy-button {
+            margin-left: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            background-color: var(--secondary-color);
+        }
+
+        .success-message {
+            color: var(--secondary-color);
+            margin-top: 0.5rem;
+        }
+
+        #deleteForm h2 {
+            color: #e74c3c;
+        }
+
+        ;
+
+        #deleteForm button:hover {
+            background-color: #c0392b;
+        }
+
+        #deleteForm button {
+            background-color: #e74c3c;
+        }
+
+        ;
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>URL Shortener</h1>
+
+        <form id="createForm" class="form-group">
+            <h2>Create Short URL</h2>
+            <label for="longUrl">Long URL</label>
+            <input type="url" id="longUrl" placeholder="https://shorten.com/very/long/url" required>
+
+            <label for="customId">Custom ID (optional)</label>
+            <input type="text" id="customId" placeholder="my-custom-id" pattern="[a-zA-Z0-9-_]+">
+
+            <label for="ttlHours">Time to Live (hours, optional)</label>
+            <input type="number" id="ttlHours" placeholder="24" min="1">
+
+            <button type="submit" id="createButton">Shorten URL</button>
+        </form>
+
+        <form id="deleteForm" class="form-group">
+            <h2>Delete Short URL</h2>
+            <label for="deleteId">Short URL ID</label>
+            <input type="text" id="deleteId" placeholder="Enter URL ID to delete" required>
+            <button type="submit" id="deleteButton">Delete URL</button>
+        </form>
+
+        <div id="result">
+            Results will appear here...
+        </div>
+    </div>
+
+    <script>
+
+        const API_URL = "http://localhost:8080";
+
+        document.getElementById("createForm").addEventListener("submit", handleCreateSubmit);
+        document.getElementById("deleteForm").addEventListener("submit", handleDeleteSubmit);
+
+
+        async function handleCreateSubmit(event) {
+            event.preventDefault();
+            const button = document.getElementById('createButton');
+            const form = document.getElementById('createForm');
+
+            try {
+                button.disabled = true;
+                form.classList.add('loading');
+                await createShortUrl();
+            } finally {
+                button.disabled = false;
+                form.classList.remove('loading');
+            }
+        }
+
+        async function handleDeleteSubmit(event) {
+            event.preventDefault();
+            const button = document.getElementById('deleteButton');
+            const form = document.getElementById('deleteForm');
+
+            try {
+                button.disabled = true;
+                form.classList.add('loading');
+                await deleteUrl();
+            } finally {
+                button.disabled = false;
+                form.classList.remove('loading');
+            }
+        }
+
+        async function createShortUrl() {
+            const longUrl = document.getElementById('longUrl').value;
+            const customId = document.getElementById('customId').value;
+            const ttlHours = document.getElementById('ttlHours').value;
+
+            const payload = {
+                url: longUrl,
+                customId: customId || null,
+                ttlHours: ttlHours ? parseInt(ttlHours) : null
+            };
+
+            try {
+                const response = await fetch(API_URL + '/shorten', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const shortUrl = `${API_URL}/${data.shortId}`;
+                console.log("hghvhv ", shortUrl)
+                document.getElementById('result').innerHTML = `
+            <h3>Success!</h3>
+            <p>
+                Short URL: <a class="short-url" href="${shortUrl}" target="_blank">${shortUrl}</a>
+                <button onclick="copyToClipboard('${shortUrl}', event)" class="copy-button">Copy</button>
+            </p>
+            <p>Created: ${new Date(data.createdAt).toLocaleString()}</p>
+            ${data.expiresAt ? `<p>Expires: ${new Date(data.expiresAt).toLocaleString()}</p>` : ''}
+        `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+            <p class="error">Error: ${error.message.includes('409') ? 'Custom ID already exists' : error.message}</p>
+        `;
+            }
+        }
+
+        async function deleteUrl() {
+            const id = document.getElementById('deleteId').value;
+
+            try {
+                const response = await fetch(API_URL + `/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Error: ${response.status}`);
+                }
+
+                document.getElementById('result').innerHTML = `
+            <h3>Success!</h3>
+            <p class="success-message">URL with ID "${id}" has been deleted.</p>
+        `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+            <p class="error">Error: ${error.message.includes('404') ? 'URL Does Not Exist' : error.message}</p>
+        `;
+            }
+        }
+
+        async function copyToClipboard(text, event) {
+            try {
+                await navigator.clipboard.writeText(text);
+                const copyButton = event.target;
+                const originalText = copyButton.textContent;
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                }, 8000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        }
+    </script>
+</body>
+
+</html>
