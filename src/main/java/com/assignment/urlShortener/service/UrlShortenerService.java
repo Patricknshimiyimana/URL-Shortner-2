@@ -21,9 +21,9 @@ public class UrlShortenerService {
     private final Random random = new Random();
 
     public UrlMapping createShortUrl(String longUrl, String customId, Long ttlHours) {
-        String shortId = customId != null ? customId : generateShortId();
+        String shortId = (customId != null && !customId.trim().isEmpty()) ? customId : generateShortId();
         
-        if (customId != null && repository.existsById(customId)) {
+        if (customId != null && !customId.trim().isEmpty() && repository.existsById(customId)) {
             log.error("Custom ID {} already exists", customId);
             throw new CustomIdAlreadyExistsException("Custom ID already exists");
         }
