@@ -4,7 +4,7 @@ import com.assignment.urlShortener.exception.CustomIdAlreadyExistsException;
 import com.assignment.urlShortener.exception.UrlNotFoundException;
 import com.assignment.urlShortener.model.UrlMapping;
 import com.assignment.urlShortener.repository.UrlMappingRepository;
-import com.assignment.urlShortener.service.UrlShortenerService;
+import com.assignment.urlShortener.service.UrlShortenerServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,11 +26,11 @@ public class UrlShortenerServiceTest {
     @Mock
     private UrlMappingRepository repository;
 
-    private UrlShortenerService service;
+    private UrlShortenerServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new UrlShortenerService(repository);
+        service = new UrlShortenerServiceImpl(repository);
     }
 
     @Test
